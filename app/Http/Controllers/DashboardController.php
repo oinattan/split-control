@@ -16,19 +16,29 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $userId = Auth::id();
-        
-        // Executar verificação de compensação automática antes de calcular os dados
-        CompensationService::checkAndCompleteCompensatedSplits();
-        
-        // Temporariamente usar o método antigo enquanto corrigimos os saldos
-        // Calcular total que outras pessoas devem para o usuário logado
-        $totalOwed = SplitParticipant::join('split_table', 'split_participants.split_id', '=', 'split_table.id')
-            ->where('split_table.payer_user_id', $userId)
-            ->where('split_participants.user_id', '!=', $userId)
-            ->where('split_participants.status', 'pending')
-            ->where('split_participants.approval_status', 'approved')
-            ->sum('split_participants.amount_owed');
+        try {
+            $userId = Auth::id();
+            
+            if (!$userId) {
+                return redirect()->route('login');
+            }
+            
+            // Executar verificação de compensação automática antes de calcular os dados
+            try {
+                CompensationService::checkAndCompleteCompensatedSplits();
+            } catch (\Exception $e) {
+                // Log do erro mas não interrompe o dashboard
+                \Log::warning('Erro ao executar compensação automática: ' . $e->getMessage());
+            }
+            
+            // Temporariamente usar o método antigo enquanto corrigimos os saldos
+            // Calcular total que outras pessoas devem para o usuário logado
+            $totalOwed = SplitParticipant::join('split_table', 'split_participants.split_id', '=', 'split_table.id')
+                ->where('split_table.payer_user_id', $userId)
+                ->where('split_participants.user_id', '!=', $userId)
+                ->where('split_participants.status', 'pending')
+                ->where('split_participants.approval_status', 'approved')
+                ->sum('split_participants.amount_owed') ?? 0;
 
         // Calcular total que o usuário deve para outras pessoas
         $totalOwing = SplitParticipant::join('split_table', 'split_participants.split_id', '=', 'split_table.id')
@@ -36,7 +46,7 @@ class DashboardController extends Controller
             ->where('split_table.payer_user_id', '!=', $userId)
             ->where('split_participants.status', 'pending')
             ->where('split_participants.approval_status', 'approved')
-            ->sum('split_participants.amount_owed');
+            ->sum('split_participants.amount_owed') ?? 0;
 
         // Buscar resumo detalhado por usuário (incluindo saldos)
         $userDebts = $this->getUserDebtsDetails($userId);
@@ -45,7 +55,7 @@ class DashboardController extends Controller
         $pendingApprovals = SplitParticipant::with(['split.payer'])
             ->where('user_id', $userId)
             ->where('approval_status', 'pending')
-            ->count();
+            ->count() ?? 0;
 
         // Estatísticas adicionais para o dashboard
         $stats = $this->getDashboardStats($userId);
@@ -53,16 +63,43 @@ class DashboardController extends Controller
         return Inertia::render('Dashboard', [
             'totalOwed' => (float) $totalOwed,
             'totalOwing' => (float) $totalOwing,
-            'userDebts' => $userDebts,
+            'userDebts' => $userDebts ?? [],
             'pendingApprovals' => $pendingApprovals,
-            'stats' => $stats
+            'stats' => $stats ?? []
         ]);
+        
+        } catch (\Exception $e) {
+            // Log do erro completo
+            \Log::error('Erro no dashboard: ' . $e->getMessage(), [
+                'user_id' => Auth::id(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Retornar dashboard com dados vazios em caso de erro
+            return Inertia::render('Dashboard', [
+                'totalOwed' => 0,
+                'totalOwing' => 0,
+                'userDebts' => [],
+                'pendingApprovals' => 0,
+                'stats' => [
+                    'splitsAsPayer' => 0,
+                    'splitsAsParticipant' => 0,
+                    'totalSplits' => 0,
+                    'pendingSplits' => 0,
+                    'totalPaid' => 0,
+                    'totalInvolved' => 0,
+                    'recentSplits' => 0
+                ],
+                'error' => 'Ocorreu um erro ao carregar os dados. Tente novamente.'
+            ]);
+        }
     }
 
     private function getUserDebtsDetails($userId)
     {
-        // Buscar todos os splits pendentes onde o usuário está envolvido
-        $allUsers = collect();
+        try {
+            // Buscar todos os splits pendentes onde o usuário está envolvido
+            $allUsers = collect();
 
         // 1. Splits onde o usuário pagou (outros devem para ele)
         $owedByOthers = SplitParticipant::join('split_table', 'split_participants.split_id', '=', 'split_table.id')
@@ -138,35 +175,41 @@ class DashboardController extends Controller
         }
 
         return $allUsers->values()->toArray();
+        
+        } catch (\Exception $e) {
+            \Log::error('Erro ao buscar detalhes de débitos: ' . $e->getMessage());
+            return [];
+        }
     }
 
     private function getDashboardStats($userId)
     {
-        // Splits onde o usuário é o pagador
-        $splitsAsPayer = SplitTable::where('payer_user_id', $userId)->count();
+        try {
+            // Splits onde o usuário é o pagador
+            $splitsAsPayer = SplitTable::where('payer_user_id', $userId)->count() ?? 0;
 
         // Splits onde o usuário participa
-        $splitsAsParticipant = SplitParticipant::where('user_id', $userId)->count();
+        $splitsAsParticipant = SplitParticipant::where('user_id', $userId)->count() ?? 0;
 
         // Total de splits únicos (pode participar e pagar no mesmo split)
         $totalSplits = SplitTable::whereHas('participants', function($query) use ($userId) {
             $query->where('user_id', $userId);
-        })->orWhere('payer_user_id', $userId)->distinct()->count();
+        })->orWhere('payer_user_id', $userId)->distinct()->count() ?? 0;
 
         // Splits pendentes que envolvem o usuário
         $pendingSplits = SplitTable::whereHas('participants', function($query) use ($userId) {
             $query->where('user_id', $userId)->where('status', 'pending');
         })->orWhereHas('participants', function($query) use ($userId) {
             $query->where('status', 'pending');
-        })->where('payer_user_id', $userId)->distinct()->count();
+        })->where('payer_user_id', $userId)->distinct()->count() ?? 0;
 
         // Total gasto pelo usuário (como pagador)
-        $totalPaid = SplitTable::where('payer_user_id', $userId)->sum('total_amount');
+        $totalPaid = SplitTable::where('payer_user_id', $userId)->sum('total_amount') ?? 0;
 
         // Valor total em splits que o usuário participou
         $totalInvolved = SplitTable::whereHas('participants', function($query) use ($userId) {
             $query->where('user_id', $userId);
-        })->sum('total_amount');
+        })->sum('total_amount') ?? 0;
 
         // Splits recentes (últimos 7 dias)
         $recentSplits = SplitTable::whereHas('participants', function($query) use ($userId) {
@@ -174,7 +217,7 @@ class DashboardController extends Controller
         })->orWhere('payer_user_id', $userId)
           ->where('expense_date', '>=', now()->subDays(7))
           ->distinct()
-          ->count();
+          ->count() ?? 0;
 
         return [
             'splitsAsPayer' => $splitsAsPayer,
@@ -185,5 +228,18 @@ class DashboardController extends Controller
             'totalInvolved' => (float) $totalInvolved,
             'recentSplits' => $recentSplits,
         ];
+        
+        } catch (\Exception $e) {
+            \Log::error('Erro ao buscar estatísticas do dashboard: ' . $e->getMessage());
+            return [
+                'splitsAsPayer' => 0,
+                'splitsAsParticipant' => 0,
+                'totalSplits' => 0,
+                'pendingSplits' => 0,
+                'totalPaid' => 0,
+                'totalInvolved' => 0,
+                'recentSplits' => 0,
+            ];
+        }
     }
 }
