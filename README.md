@@ -1,4 +1,4 @@
-# split-control
+# Split Control
 
 Versão: v0.1.0-beta.1 — Beta inicial
 
