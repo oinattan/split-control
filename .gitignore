@@ -1,0 +1,53 @@
+# .gitignore para projeto Laravel + Node
+# Mantém arquivos sensíveis e artefatos de build fora do repositório
+
+# Environment
+.env
+.env.*
+# Permitir commitar o arquivo de exemplo de variáveis de ambiente
+!.env.example
+
+# Vendor / dependencies
+/vendor/
+/node_modules/
+
+# Build / assets
+/public/build/
+/public/hot
+/public/storage
+
+# Storage & cache
+/storage/*.key
+/storage/framework/cache/data/
+/storage/framework/sessions/
+/storage/framework/views/
+/storage/logs/
+
+# IDEs / editors
+/.idea/
+/.vscode/
+/.phpstorm.meta.php
+
+# System files
+.DS_Store
+Thumbs.db
+
+# PHPUnit / test cache
+/.phpunit.result.cache
+/.phpunit.cache
+
+# Composer / npm logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+/auth.json
+Homestead.json
+Homestead.yaml
+
+# Optional: arquivo de banco SQLite local (criado na raiz database/database.sqlite)
+# Se você não quer commitar o banco de desenvolvimento, mantenha esta linha ativa.
+/database/database.sqlite
+
+# Nota: se você precisa commitar o arquivo de DB para um demo, remova a linha acima e commite explicitamente.

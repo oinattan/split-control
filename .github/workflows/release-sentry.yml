@@ -1,0 +1,72 @@
+name: Release with Sentry
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  sentry_release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+      SENTRY_ENABLED: ${{ secrets.SENTRY_ENABLED }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build with sourcemaps
+        env:
+          VITE_SENTRY_DSN: ${{ env.VITE_SENTRY_DSN }}
+          VITE_APP_VERSION: ${{ github.ref_name }}
+        run: npm run build:sourcemap || npm run build
+
+      - name: Check Sentry configuration
+        id: check_sentry
+        run: |
+          # Require SENTRY_ENABLED=true plus the three required secrets to proceed
+          if [ "$SENTRY_ENABLED" != "true" ]; then
+            echo "configured=false" >> $GITHUB_OUTPUT
+            echo "reason=SENTRY_ENABLED not set to 'true'" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if [ -z "$SENTRY_AUTH_TOKEN" ] || [ -z "$SENTRY_ORG" ] || [ -z "$SENTRY_PROJECT" ]; then
+            echo "configured=false" >> $GITHUB_OUTPUT
+            echo "reason=missing_required_secret" >> $GITHUB_OUTPUT
+          else
+            echo "configured=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Sentry release and upload sourcemaps
+        if: ${{ steps.check_sentry.outputs.configured == 'true' }}
+        uses: getsentry/action-release@v3
+        env:
+          SENTRY_AUTH_TOKEN: ${{ env.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ env.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ env.SENTRY_PROJECT }}
+        with:
+          # release accepts a string identifying the release (tags will have refs/tags/ stripped)
+          release: ${{ github.ref_name }}
+          # upload sourcemaps from public/build
+          sourcemaps: './public/build'
+
+      - name: Note if Sentry not configured or disabled
+        if: ${{ steps.check_sentry.outputs.configured != 'true' }}
+        run: |
+          echo "Sentry upload skipped. Ensure secrets SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT are set and SENTRY_ENABLED=true if you want uploads."
