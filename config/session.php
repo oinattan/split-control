@@ -18,7 +18,10 @@ return [
     |
     */
 
-    'driver' => env('SESSION_DRIVER', 'database'),
+    // Prefer explicit SESSION_DRIVER. If not set, use database when a
+    // DATABASE_URL exists (Heroku/remote DB). Otherwise fall back to file
+    // driver to avoid trying to use sqlite file that may not exist on dynos.
+    'driver' => env('SESSION_DRIVER', env('DATABASE_URL') ? 'database' : 'file'),
 
     /*
     |--------------------------------------------------------------------------
