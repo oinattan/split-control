@@ -26,7 +26,14 @@ $app = Application::configure(basePath: dirname(__DIR__))
 // Apply production-specific storage fallbacks after the Application instance is created
 if (env('APP_ENV') === 'production') {
     $app->useStoragePath('/tmp/storage');
-    $app->useTemporaryPath('/tmp/cache');
+    if (method_exists($app, 'useTemporaryPath')) {
+        $app->useTemporaryPath('/tmp/cache');
+    } else {
+        // Fallback: set CACHE_PATH env for runtime code that reads it
+        putenv('CACHE_PATH=' . '/tmp/cache');
+        $_ENV['CACHE_PATH'] = '/tmp/cache';
+        $_SERVER['CACHE_PATH'] = '/tmp/cache';
+    }
 }
 
 return $app;
