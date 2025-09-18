@@ -3,25 +3,50 @@ import SummaryCard from '@/Components/SummaryCard';
 import UserDebtCard from '@/Components/UserDebtCard';
 import { Head, Link } from '@inertiajs/react';
 
-export default function Dashboard({ totalOwed, totalOwing, userDebts, stats, pendingApprovals }) {
-    // Usar dados reais do backend
+export default function Dashboard({ totalOwed, totalOwing, userDebts, stats, pendingApprovals, error }) {
+    // Usar dados reais do backend com validação e fallbacks seguros
     const data = {
-        totalOwed: totalOwed || 0,
-        totalOwing: totalOwing || 0,
-        userDebts: userDebts || []
+        totalOwed: (typeof totalOwed === 'number' && !isNaN(totalOwed)) ? totalOwed : 0,
+        totalOwing: (typeof totalOwing === 'number' && !isNaN(totalOwing)) ? totalOwing : 0,
+        userDebts: Array.isArray(userDebts) ? userDebts : []
     };
 
-    const dashboardStats = stats || {
-        splitsAsPayer: 0,
-        splitsAsParticipant: 0,
-        totalSplits: 0,
-        pendingSplits: 0,
-        totalPaid: 0,
-        totalInvolved: 0,
-        recentSplits: 0
+    const dashboardStats = {
+        splitsAsPayer: (stats?.splitsAsPayer && !isNaN(stats.splitsAsPayer)) ? stats.splitsAsPayer : 0,
+        splitsAsParticipant: (stats?.splitsAsParticipant && !isNaN(stats.splitsAsParticipant)) ? stats.splitsAsParticipant : 0,
+        totalSplits: (stats?.totalSplits && !isNaN(stats.totalSplits)) ? stats.totalSplits : 0,
+        pendingSplits: (stats?.pendingSplits && !isNaN(stats.pendingSplits)) ? stats.pendingSplits : 0,
+        totalPaid: (stats?.totalPaid && !isNaN(stats.totalPaid)) ? stats.totalPaid : 0,
+        totalInvolved: (stats?.totalInvolved && !isNaN(stats.totalInvolved)) ? stats.totalInvolved : 0,
+        recentSplits: (stats?.recentSplits && !isNaN(stats.recentSplits)) ? stats.recentSplits : 0
     };
 
     const netBalance = data.totalOwed - data.totalOwing;
+    const safePendingApprovals = (typeof pendingApprovals === 'number' && !isNaN(pendingApprovals)) ? pendingApprovals : 0;
+
+    // Função para criar links seguros que não quebram se a rota não existir
+    const createSafeLink = (routeName, content, className) => {
+        try {
+            return (
+                <Link href={route(routeName)} className={className}>
+                    {content}
+                </Link>
+            );
+        } catch (error) {
+            // Se a rota não existir, retornar um botão desabilitado
+            return (
+                <div className={`${className} opacity-50 cursor-not-allowed`}>
+                    {content}
+                </div>
+            );
+        }
+    };
+
+    // Função segura para formatação de moeda
+    const formatCurrency = (value) => {
+        const safeValue = (typeof value === 'number' && !isNaN(value)) ? value : 0;
+        return safeValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    };
 
     return (
         <AuthenticatedLayout
@@ -35,6 +60,25 @@ export default function Dashboard({ totalOwed, totalOwing, userDebts, stats, pen
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+                    {/* Mostrar erro se houver */}
+                    {error && (
+                        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                            <div className="flex">
+                                <div className="flex-shrink-0">
+                                    <span className="text-red-500 text-xl">⚠️</span>
+                                </div>
+                                <div className="ml-3">
+                                    <h3 className="text-sm font-medium text-red-800">
+                                        Erro ao carregar dados
+                                    </h3>
+                                    <div className="mt-2 text-sm text-red-700">
+                                        {error}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Cards de Resumo Principal */}
                     <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
                         <SummaryCard
@@ -71,7 +115,7 @@ export default function Dashboard({ totalOwed, totalOwing, userDebts, stats, pen
                     </div>
 
                     {/* Estatísticas Detalhadas */}
-                    <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-4">
+                    <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                         <div className="bg-white p-6 rounded-lg shadow-sm border">
                             <div className="flex items-center">
                                 <div className="p-2 bg-blue-100 rounded-md">
@@ -104,17 +148,12 @@ export default function Dashboard({ totalOwed, totalOwing, userDebts, stats, pen
                                     </div>
                                     <div className="ml-4">
                                         <p className="text-sm font-medium text-gray-600">Aguardando Aprovação</p>
-                                        <p className="text-2xl font-bold text-gray-900">{pendingApprovals || 0}</p>
+                                        <p className="text-2xl font-bold text-gray-900">{safePendingApprovals}</p>
                                     </div>
                                 </div>
-                                {pendingApprovals > 0 && (
-                                    <Link
-                                        href={route('splits.pending-approvals')}
-                                        className="text-xs bg-orange-500 text-white px-2 py-1 rounded-full hover:bg-orange-600"
-                                    >
-                                        Ver
-                                    </Link>
-                                )}
+                                {safePendingApprovals > 0 && 
+                                    createSafeLink('splits.pending-approvals', 'Ver', 'text-xs bg-orange-500 text-white px-2 py-1 rounded-full hover:bg-orange-600')
+                                }
                             </div>
                         </div>
 
@@ -126,7 +165,7 @@ export default function Dashboard({ totalOwed, totalOwing, userDebts, stats, pen
                                 <div className="ml-4">
                                     <p className="text-sm font-medium text-gray-600">Você pagou</p>
                                     <p className="text-lg font-bold text-gray-900">
-                                        R$ {dashboardStats.totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        R$ {formatCurrency(dashboardStats.totalPaid)}
                                     </p>
                                 </div>
                             </div>
@@ -149,28 +188,28 @@ export default function Dashboard({ totalOwed, totalOwing, userDebts, stats, pen
                     <div className="mb-8 bg-white overflow-hidden shadow-sm sm:rounded-lg">
                         <div className="p-6">
                             <h3 className="text-lg font-medium text-gray-900 mb-4">Ações Rápidas</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <Link
-                                    href={route('splits.create')}
-                                    className="flex items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
-                                >
-                                    <span className="text-3xl mr-4">➕</span>
-                                    <div>
-                                        <h4 className="font-medium text-gray-900">Novo Split</h4>
-                                        <p className="text-sm text-gray-600">Criar um novo gasto compartilhado</p>
-                                    </div>
-                                </Link>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {createSafeLink('splits.create', 
+                                    <>
+                                        <span className="text-3xl mr-4">➕</span>
+                                        <div>
+                                            <h4 className="font-medium text-gray-900">Novo Split</h4>
+                                            <p className="text-sm text-gray-600">Criar um novo gasto compartilhado</p>
+                                        </div>
+                                    </>,
+                                    'flex items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors'
+                                )}
 
-                                <Link
-                                    href={route('splits.index')}
-                                    className="flex items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
-                                >
-                                    <span className="text-3xl mr-4">📋</span>
-                                    <div>
-                                        <h4 className="font-medium text-gray-900">Ver Todos</h4>
-                                        <p className="text-sm text-gray-600">Gerenciar splits existentes</p>
-                                    </div>
-                                </Link>
+                                {createSafeLink('splits.index',
+                                    <>
+                                        <span className="text-3xl mr-4">📋</span>
+                                        <div>
+                                            <h4 className="font-medium text-gray-900">Ver Todos</h4>
+                                            <p className="text-sm text-gray-600">Gerenciar splits existentes</p>
+                                        </div>
+                                    </>,
+                                    'flex items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors'
+                                )}
 
                                 <div className="flex items-center p-4 border-2 border-dashed border-gray-300 rounded-lg opacity-50">
                                     <span className="text-3xl mr-4">📈</span>
@@ -212,16 +251,18 @@ export default function Dashboard({ totalOwed, totalOwing, userDebts, stats, pen
                             {data.userDebts.length > 0 ? (
                                 <div className="space-y-4">
                                     {data.userDebts.map((debt) => (
-                                        <UserDebtCard
-                                            key={debt.user.id}
-                                            user={debt.user}
-                                            amountOwed={debt.amountOwed}
-                                            amountOwing={debt.amountOwing}
-                                            balance={debt.balance}
-                                            rawOwed={debt.rawOwed}
-                                            rawOwing={debt.rawOwing}
-                                        />
-                                    ))}
+                                        debt && debt.user && debt.user.id ? (
+                                            <UserDebtCard
+                                                key={debt.user.id}
+                                                user={debt.user}
+                                                amountOwed={debt.amountOwed}
+                                                amountOwing={debt.amountOwing}
+                                                balance={debt.balance}
+                                                rawOwed={debt.rawOwed}
+                                                rawOwing={debt.rawOwing}
+                                            />
+                                        ) : null
+                                    )).filter(Boolean)}
                                 </div>
                             ) : (
                                 <div className="text-center py-12">
@@ -235,14 +276,12 @@ export default function Dashboard({ totalOwed, totalOwing, userDebts, stats, pen
                                             : 'Comece adicionando seus primeiros gastos compartilhados'
                                         }
                                     </p>
-                                    {dashboardStats.totalSplits === 0 && (
-                                        <Link
-                                            href={route('splits.create')}
-                                            className="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
-                                        >
-                                            ➕ Adicionar Primeiro Gasto
-                                        </Link>
-                                    )}
+                                    {dashboardStats.totalSplits === 0 && 
+                                        createSafeLink('splits.create',
+                                            '➕ Adicionar Primeiro Gasto',
+                                            'inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700'
+                                        )
+                                    }
                                 </div>
                             )}
                         </div>
