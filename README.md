@@ -191,6 +191,102 @@ Notas finais
 
 
 
+## Deploy no Heroku
+
+Para fazer deploy no Heroku, siga estes passos:
+
+### 1. Configurar buildpacks (Node.js + PHP)
+
+```bash
+heroku buildpacks:clear --app seu-app
+heroku buildpacks:add heroku/nodejs --app seu-app
+heroku buildpacks:add heroku/php --app seu-app
+```
+
+### 2. Configurar banco de dados (Postgres)
+
+Configure a variável `DATABASE_URL` com sua string de conexão Postgres:
+
+```bash
+heroku config:set DATABASE_URL="postgres://usuario:senha@host:5432/database" --app seu-app
+```
+
+### 3. Configurar outras variáveis essenciais
+
+```bash
+heroku config:set APP_ENV=production --app seu-app
+heroku config:set APP_DEBUG=false --app seu-app
+heroku config:set SESSION_DRIVER=database --app seu-app
+heroku config:set CACHE_DRIVER=database --app seu-app
+```
+
+### 4. Gerar chave da aplicação
+
+```bash
+heroku run php artisan key:generate --app seu-app
+```
+
+### 5. Executar migrations
+
+```bash
+heroku run php artisan migrate --force --app seu-app
+```
+
+### 6. Limpar caches (importante após mudanças de configuração)
+
+```bash
+heroku run php artisan config:clear --app seu-app
+heroku run php artisan view:clear --app seu-app
+heroku run php artisan route:clear --app seu-app
+```
+
+### Resolvendo erro "Vite manifest not found"
+
+Se você receber o erro `ViteManifestNotFoundException`, há duas soluções:
+
+**Opção A - Build automático no Heroku (recomendado):**
+- Os buildpacks Node.js + PHP já foram configurados no passo 1
+- O `package.json` inclui `heroku-postbuild` que roda `npm ci && npm run build`
+- Faça commit e push para acionar o build:
+
+```bash
+git add package.json
+git commit -m "ci: enable heroku postbuild for vite assets"
+git push heroku main
+```
+
+**Opção B - Build local e commit dos assets:**
+
+```bash
+npm ci
+npm run build
+git add -f public/build
+git commit -m "chore: add built vite assets"
+git push heroku main
+```
+
+### Verificações importantes
+
+Após o deploy, verifique:
+
+```bash
+# Confirmar que o manifest existe
+heroku run php -r "echo file_exists('public/build/manifest.json') ? 'manifest exists' : 'manifest missing';" --app seu-app
+
+# Ver configurações atuais
+heroku config --app seu-app
+
+# Monitorar logs
+heroku logs --tail --app seu-app
+```
+
+### Troubleshooting
+
+- **Erro de conexão com banco:** Verifique se `DATABASE_URL` está correto e o banco permite conexões do Heroku
+- **Build falha por memória:** Use a Opção B (build local) ou configure um dyno com mais memória
+- **Session errors:** Certifique-se que `SESSION_DRIVER=database` e rode as migrations
+- **500 errors:** Temporariamente defina `APP_DEBUG=true` para ver stack traces completos
+
 ## Estrutura importante
 
 - `app/` — código Laravel (Controllers, Models, Services)
