@@ -5,12 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Sentry\Laravel\Integration;
 
-return tap(Application::configure(basePath: dirname(__DIR__)), function (Application $app) {
-    if (env('APP_ENV') === 'production') {
-        $app->useStoragePath('/tmp/storage');
-        $app->useTemporaryPath('/tmp/cache');
-    }
-})
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
@@ -27,3 +22,11 @@ return tap(Application::configure(basePath: dirname(__DIR__)), function (Applica
     ->withExceptions(function (Exceptions $exceptions): void {
         Integration::handles($exceptions);
     })->create();
+
+// Apply production-specific storage fallbacks after the Application instance is created
+if (env('APP_ENV') === 'production') {
+    $app->useStoragePath('/tmp/storage');
+    $app->useTemporaryPath('/tmp/cache');
+}
+
+return $app;
