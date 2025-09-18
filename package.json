@@ -2,12 +2,18 @@
     "$schema": "https://json.schemastore.org/package.json",
     "private": true,
     "type": "module",
+    "engines": {
+        "node": "18.x",
+        "npm": "9.x"
+    },
     "scripts": {
         "build": "vite build",
         "build:sourcemap": "vite build --sourcemap",
         "dev": "vite",
         "lint": "eslint resources --ext .js,.jsx",
-        "format": "prettier --write \"resources/**/*.{js,jsx,css}\""
+        "format": "prettier --write \"resources/**/*.{js,jsx,css}\"",
+        "postinstall": "npm run build || true",
+        "heroku-postbuild": "npm ci && npm run build"
     },
     "devDependencies": {
         "@headlessui/react": "^2.0.0",
