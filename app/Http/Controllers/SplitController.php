@@ -224,7 +224,8 @@ class SplitController extends Controller
                         ? ($request->input('total_amount') / count($participantsInput))
                         : null, // Deixa nulo para splits customizados ou quando não há participantes
                     'expense_date' => $request->expense_date,
-                    'status' => 'pending',
+                    // O enum de status da tabela split_table define 'pending_approval' como valor inicial
+                    'status' => 'pending_approval',
                     'created_by' => Auth::id(),
                     'payer_user_id' => $request->payer_user_id,
                 ]);

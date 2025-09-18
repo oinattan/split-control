@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Models\SplitTable;
 use App\Models\SplitParticipant;
 use App\Models\User;
@@ -28,7 +29,7 @@ class DashboardController extends Controller
                 CompensationService::checkAndCompleteCompensatedSplits();
             } catch (\Exception $e) {
                 // Log do erro mas não interrompe o dashboard
-                \Log::warning('Erro ao executar compensação automática: ' . $e->getMessage());
+                Log::warning('Erro ao executar compensação automática: ' . $e->getMessage());
             }
             
             // Temporariamente usar o método antigo enquanto corrigimos os saldos
@@ -70,7 +71,7 @@ class DashboardController extends Controller
         
         } catch (\Exception $e) {
             // Log do erro completo
-            \Log::error('Erro no dashboard: ' . $e->getMessage(), [
+            Log::error('Erro no dashboard: ' . $e->getMessage(), [
                 'user_id' => Auth::id(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -177,7 +178,7 @@ class DashboardController extends Controller
         return $allUsers->values()->toArray();
         
         } catch (\Exception $e) {
-            \Log::error('Erro ao buscar detalhes de débitos: ' . $e->getMessage());
+            Log::error('Erro ao buscar detalhes de débitos: ' . $e->getMessage());
             return [];
         }
     }
@@ -230,7 +231,7 @@ class DashboardController extends Controller
         ];
         
         } catch (\Exception $e) {
-            \Log::error('Erro ao buscar estatísticas do dashboard: ' . $e->getMessage());
+            Log::error('Erro ao buscar estatísticas do dashboard: ' . $e->getMessage());
             return [
                 'splitsAsPayer' => 0,
                 'splitsAsParticipant' => 0,
