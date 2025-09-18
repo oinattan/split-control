@@ -28,7 +28,7 @@ export default function SummaryCard({ title, amount, variant = 'default', childr
                         {title}
                     </h3>
                     <p className={`text-2xl font-bold ${amountVariants[variant]}`}>
-                        R$ {amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {((typeof amount === 'number' && !isNaN(amount)) ? amount : 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                 </div>
                 {children && (
