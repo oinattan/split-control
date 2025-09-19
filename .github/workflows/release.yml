@@ -18,7 +18,7 @@ jobs:
 
       - name: Write VERSION from tag
         run: |
-          echo "${GITHUB_REF#refs/tags/}" > 
+          echo "${GITHUB_REF#refs/tags/}" > VERSION
 
       - name: Commit VERSION
         run: |
@@ -26,7 +26,17 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add VERSION
           git commit -m "ci(release): update VERSION to ${GITHUB_REF#refs/tags/}" || echo "no changes to commit"
-          git push origin HEAD:main || true
+
+      - name: Create Pull Request for VERSION update
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "ci(release): update VERSION to ${GITHUB_REF#refs/tags/}"
+          branch: "update-version-${{ github.ref_name }}"
+          title: "chore(release): update VERSION to ${{ github.ref_name }}"
+          body: |
+            This PR updates the `VERSION` file to match the created tag `${{ github.ref_name }}`.
+          base: main
 
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
