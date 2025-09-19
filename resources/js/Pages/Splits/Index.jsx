@@ -28,7 +28,32 @@ export default function SplitsIndex({ splits, users, auth }) {
     };
 
     const handleMarkAsPaid = (splitId, participantId) => {
-        router.patch(route('splits.mark-paid', { split: splitId, participant: participantId }));
+        // Segurança: confirmar ação
+        if (!confirm('Confirmar marcar este participante como pago?')) return;
+
+        // Debug: log dos ids
+        try {
+            console.log('handleMarkAsPaid called', { splitId, participantId });
+        } catch (e) {
+            // ignore
+        }
+
+        // Executar requisição PATCH via Inertia router com callbacks para tratar sucesso/erro
+        router.patch(
+            route('splits.mark-paid', { split: splitId, participant: participantId }),
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    // Opcional: você pode disparar uma notificação ou refrescar dados
+                    console.log('Marcado como pago com sucesso', { splitId, participantId });
+                },
+                onError: (errors) => {
+                    console.error('Erro ao marcar como pago', errors);
+                    alert('Erro ao marcar como pago. Veja console para detalhes.');
+                }
+            }
+        );
     };
 
     const formatCurrency = (amount) => {

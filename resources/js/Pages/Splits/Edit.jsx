@@ -97,6 +97,24 @@ export default function SplitsEdit({ split, users, auth }) {
         >
             <Head title="Editar Split" />
 
+            <div >
+                <div className="max-w-4xl mx-auto sm:px-6 lg:px-8 mt-6 bg-red-200 shadow-sm rounded-lg py-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">Em fase de testes</h1>
+                        <p className="mt-1 text-gray-600">
+                            Edição ainda em desenvolvimento. Algumas funcionalidades podem não estar completas.
+                        </p>
+                    </div>
+        
+                    <button
+                        onClick={() => router.visit(route('splits.index'))}
+                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                    >
+                        &larr; Voltar para Splits
+                    </button>
+                </div>
+            </div>
+
             <div className="py-12">
                 <div className="max-w-4xl mx-auto sm:px-6 lg:px-8">
                     <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">

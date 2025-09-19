@@ -26,8 +26,11 @@ class SplitController extends Controller
             $splitCount = SplitTable::count();
             Log::info("Total splits: " . $splitCount);
 
-            // Buscar splits simples primeiro
-            $splits = SplitTable::with(['creator', 'participants.user', 'payer'])
+            // Buscar apenas splits onde o usuário atual é participante
+            $splits = SplitTable::whereHas('participants', function ($qry) use ($currentUserId) {
+                $qry->where('user_id', $currentUserId);
+            })
+                ->with(['creator', 'participants.user', 'payer'])
                 ->orderBy('created_at', 'desc')
                 ->get();
 
@@ -333,7 +336,7 @@ class SplitController extends Controller
 
     public function show(SplitTable $split)
     {
-    $split->load(['creator', 'participants.user', 'payer']);
+        $split->load(['creator', 'participants.user', 'payer']);
 
         return Inertia::render('Splits/Show', [
             'split' => $split

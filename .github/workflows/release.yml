@@ -18,7 +18,7 @@ jobs:
 
       - name: Write VERSION from tag
         run: |
-          echo "${GITHUB_REF#refs/tags/}" > VERSION
+          echo "${GITHUB_REF#refs/tags/}" > 
 
       - name: Commit VERSION
         run: |

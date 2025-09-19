@@ -1,10 +1,22 @@
 # Split Control
 
-Versão: v0.1.0-beta.1 — Beta inicial
+Versão: v0.1.1-beta.2 — Beta inicial
 
 Sistema de controle de despesas compartilhadas (splits) — backend em Laravel e front-end em React (Inertia).
 
 Esta é a versão beta inicial do projeto. Destina-se a testes e feedback; algumas funcionalidades estão estáveis, outras ainda em desenvolvimento ou instáveis (detalhes abaixo).
+
+## Status atual (resumo das correções)
+
+- Dashboard: estável — o painel principal foi ajustado e está funcionando conforme esperado.
+- Correções aplicadas:
+	- Erro de aprovação corrigido (bugs que impediam aprovar splits foram solucionados).
+	- Erro na exclusão corrigido (remoção de splits funcionando corretamente).
+	- Erro na criação de split corrigido (participantes e registros agora são salvos corretamente).
+- Edição de split: ainda em desenvolvimento — a funcionalidade existe, mas permanece em aprimoramento.
+- Listagem de splits: ajustada para exibir apenas os splits pertencentes ao usuário autenticado (privacidade/segurança reforçadas).
+
+Esses pontos refletem o estado atual após os últimos deployments e correções. Continue testando localmente e em staging; se encontrar regressões, abra uma issue com o passo-a-passo para reproduzir.
 
 ## Recursos (esta versão beta)
 

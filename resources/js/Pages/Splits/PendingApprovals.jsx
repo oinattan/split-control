@@ -4,21 +4,35 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
 export default function PendingApprovals({ auth, pendingSplits }) {
     const handleApprove = (participantId) => {
-        router.patch(route('participants.approve', participantId), {}, {
+        if (!confirm('Confirmar aprovação deste split?')) return;
+
+        console.log('handleApprove', participantId);
+
+        router.patch(route('participants.approve', { participant: participantId }), {}, {
+            preserveScroll: true,
             onSuccess: () => {
-                // Sucesso será tratado pelo flash message
+                console.log('Aprovação realizada com sucesso', participantId);
+            },
+            onError: (errors) => {
+                console.error('Erro ao aprovar participante', errors);
+                alert('Erro ao aprovar. Veja o console para mais detalhes.');
             }
         });
     };
 
     const handleReject = (participantId) => {
-        if (confirm('Tem certeza que deseja rejeitar este split?')) {
-            router.patch(route('participants.reject', participantId), {}, {
-                onSuccess: () => {
-                    // Sucesso será tratado pelo flash message
-                }
-            });
-        }
+        if (!confirm('Tem certeza que deseja rejeitar este split?')) return;
+
+        router.patch(route('participants.reject', { participant: participantId }), {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                console.log('Rejeição realizada com sucesso', participantId);
+            },
+            onError: (errors) => {
+                console.error('Erro ao rejeitar participante', errors);
+                alert('Erro ao rejeitar. Veja o console para mais detalhes.');
+            }
+        });
     };
 
     return (
