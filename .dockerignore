@@ -1,0 +1,16 @@
+vendor
+node_modules
+npm-debug.log
+.env
+.env.*
+storage/*.key
+storage/app
+storage/framework/cache
+storage/framework/sessions
+storage/framework/views
+storage/logs
+.DS_Store
+.idea
+.vscode
+/tests
+/phpunit.xml
